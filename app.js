@@ -11,6 +11,7 @@ const {
 } = window.SpellingQuizCore;
 
 const SAVE_KEY = "spellingQuizSavedLists";
+const DRAFT_KEY = "spellingQuizDraft";
 
 const setupView = document.querySelector("#setupView");
 const gameView = document.querySelector("#gameView");
@@ -34,7 +35,9 @@ const questionCount = document.querySelector("#questionCount");
 const startButton = document.querySelector("#startButton");
 const autoModeButton = document.querySelector("#autoModeButton");
 const classroomModeButton = document.querySelector("#classroomModeButton");
-const backButton = document.querySelector("#backButton");
+const homeButton = document.querySelector("#homeButton");
+const previousQuestionButton = document.querySelector("#previousQuestionButton");
+const questionMenuButton = document.querySelector("#questionMenuButton");
 const cornerNextButton = document.querySelector("#cornerNextButton");
 const visualToggleButton = document.querySelector("#visualToggleButton");
 const progressFill = document.querySelector("#progressFill");
@@ -52,6 +55,9 @@ const nextButton = document.querySelector("#nextButton");
 const results = document.querySelector("#results");
 const scoreText = document.querySelector("#scoreText");
 const playAgainButton = document.querySelector("#playAgainButton");
+const questionDrawer = document.querySelector("#questionDrawer");
+const closeQuestionDrawerButton = document.querySelector("#closeQuestionDrawerButton");
+const drawerQuestionList = document.querySelector("#drawerQuestionList");
 
 let gameMode = "classroom";
 let questions = [];
@@ -88,6 +94,30 @@ function setSavedLists(savedLists) {
 
 function setSaveStatus(message) {
   saveStatus.textContent = message;
+}
+
+function saveDraft() {
+  const words = getWords();
+  localStorage.setItem(
+    DRAFT_KEY,
+    JSON.stringify({
+      words,
+      visualHints: Object.fromEntries(words.map((word) => [word, visualHints[word] || ""])),
+      saveName: saveNameInput.value,
+    }),
+  );
+}
+
+function loadDraft() {
+  try {
+    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    if (!draft?.words?.length) return;
+    wordInput.value = draft.words.join("\n");
+    visualHints = draft.visualHints || {};
+    saveNameInput.value = draft.saveName || "";
+  } catch {
+    localStorage.removeItem(DRAFT_KEY);
+  }
 }
 
 function defaultListName() {
@@ -144,6 +174,7 @@ function loadLibraryCluster() {
   renderQuestionList();
   updateWordCount();
   setSaveStatus(`Loaded ${cluster.name}.`);
+  saveDraft();
 }
 
 function saveCurrentList() {
@@ -164,6 +195,7 @@ function saveCurrentList() {
   saveNameInput.value = name;
   renderSavedLists(name);
   setSaveStatus(`Saved "${name}".`);
+  saveDraft();
 }
 
 function loadSelectedList() {
@@ -179,6 +211,7 @@ function loadSelectedList() {
   questions = [];
   renderQuestionList();
   setSaveStatus(`Loaded "${name}".`);
+  saveDraft();
 }
 
 function deleteSelectedList() {
@@ -213,6 +246,7 @@ function removeWord(wordToRemove) {
   renderVisualHints();
   renderQuestionList();
   updateWordCount();
+  saveDraft();
 }
 
 function suggestVisualHints() {
@@ -224,6 +258,7 @@ function suggestVisualHints() {
   });
   renderVisualHints();
   updateWordCount();
+  saveDraft();
 }
 
 function renderVisualHints() {
@@ -258,6 +293,7 @@ function renderVisualHints() {
     input.addEventListener("input", () => {
       visualHints[word] = input.value.trim();
       updateWordCount();
+      saveDraft();
     });
     removeButton.addEventListener("click", () => removeWord(word));
     visualList.append(row);
@@ -300,6 +336,7 @@ function generateQuestions() {
   if (entries.length < MIN_WORDS) return;
   questions = buildQuestions(entries);
   renderQuestionList();
+  renderQuestionDrawer();
 }
 
 function setMode(mode) {
@@ -318,6 +355,7 @@ function startGame() {
   currentIndex = 0;
   score = 0;
   setupView.classList.add("hidden");
+  document.body.classList.add("game-active");
   gameView.classList.remove("hidden");
   results.classList.add("hidden");
   quizStage.classList.remove("hidden");
@@ -342,6 +380,7 @@ function renderCurrentQuestion() {
   const progress = (currentIndex / activeQuestions.length) * 100;
   progressFill.style.width = `${progress}%`;
   progressText.textContent = `Question ${currentIndex + 1} of ${activeQuestions.length}`;
+  previousQuestionButton.disabled = currentIndex === 0;
   timer.textContent = ANSWER_SECONDS;
   renderQuestionVisual(question);
   questionType.textContent = question.typeLabel;
@@ -361,6 +400,7 @@ function renderCurrentQuestion() {
   if (gameMode === "classroom") {
     classroomControls.classList.remove("hidden");
   }
+  renderQuestionDrawer();
 
   let secondsLeft = ANSWER_SECONDS;
   tickId = window.setInterval(() => {
@@ -453,6 +493,46 @@ function goNext() {
   renderCurrentQuestion();
 }
 
+function goPrevious() {
+  if (currentIndex <= 0) return;
+  clearTimers();
+  currentIndex -= 1;
+  renderCurrentQuestion();
+}
+
+function goToQuestion(index) {
+  clearTimers();
+  currentIndex = index;
+  closeQuestionDrawer();
+  renderCurrentQuestion();
+}
+
+function renderQuestionDrawer() {
+  const drawerQuestions = activeQuestions.length ? activeQuestions : questions;
+  drawerQuestionList.innerHTML = "";
+  drawerQuestions.forEach((question, index) => {
+    const button = document.createElement("button");
+    button.className = "drawer-question-button";
+    button.classList.toggle("active", index === currentIndex);
+    button.type = "button";
+    button.innerHTML = `
+      <span>${index + 1}</span>
+      <span>${question.typeLabel}<br>${question.emoji || ""} ${question.prompt || question.word}</span>
+    `;
+    button.addEventListener("click", () => goToQuestion(index));
+    drawerQuestionList.append(button);
+  });
+}
+
+function openQuestionDrawer() {
+  renderQuestionDrawer();
+  questionDrawer.classList.remove("hidden");
+}
+
+function closeQuestionDrawer() {
+  questionDrawer.classList.add("hidden");
+}
+
 function showResults() {
   clearTimers();
   progressFill.style.width = "100%";
@@ -467,6 +547,8 @@ function showResults() {
 
 function backToSetup() {
   clearTimers();
+  document.body.classList.remove("game-active");
+  closeQuestionDrawer();
   gameView.classList.add("hidden");
   setupView.classList.remove("hidden");
 }
@@ -474,6 +556,7 @@ function backToSetup() {
 wordInput.addEventListener("input", () => {
   renderVisualHints();
   updateWordCount();
+  saveDraft();
 });
 generateButton.addEventListener("click", generateQuestions);
 sampleButton.addEventListener("click", () => {
@@ -482,12 +565,14 @@ sampleButton.addEventListener("click", () => {
   renderVisualHints();
   updateWordCount();
   generateQuestions();
+  saveDraft();
 });
 suggestVisualsButton.addEventListener("click", suggestVisualHints);
 clearVisualsButton.addEventListener("click", () => {
   visualHints = Object.fromEntries(getWords().map((word) => [word, ""]));
   renderVisualHints();
   updateWordCount();
+  saveDraft();
 });
 saveListButton.addEventListener("click", saveCurrentList);
 loadListButton.addEventListener("click", loadSelectedList);
@@ -496,13 +581,17 @@ loadLibraryButton.addEventListener("click", loadLibraryCluster);
 autoModeButton.addEventListener("click", () => setMode("auto"));
 classroomModeButton.addEventListener("click", () => setMode("classroom"));
 startButton.addEventListener("click", startGame);
-backButton.addEventListener("click", backToSetup);
+homeButton.addEventListener("click", backToSetup);
+previousQuestionButton.addEventListener("click", goPrevious);
+questionMenuButton.addEventListener("click", openQuestionDrawer);
+closeQuestionDrawerButton.addEventListener("click", closeQuestionDrawer);
 cornerNextButton.addEventListener("click", goNext);
 visualToggleButton.addEventListener("click", toggleVisualClues);
 revealButton.addEventListener("click", () => revealAnswer(null));
 nextButton.addEventListener("click", goNext);
 playAgainButton.addEventListener("click", startGame);
 
+loadDraft();
 renderVisualHints();
 renderLibraryLists();
 renderSavedLists();

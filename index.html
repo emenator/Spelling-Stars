@@ -122,8 +122,14 @@
 
       <section class="game-view hidden" id="gameView" aria-live="polite">
         <div class="game-topbar">
-          <button class="icon-button" id="backButton" type="button" aria-label="Back to setup">
+          <button class="icon-button" id="homeButton" type="button" aria-label="Home">
+            ⌂
+          </button>
+          <button class="icon-button" id="previousQuestionButton" type="button" aria-label="Previous question">
             ←
+          </button>
+          <button class="icon-button" id="questionMenuButton" type="button" aria-label="Open question list">
+            ☰
           </button>
           <div class="progress-wrap" aria-label="Quiz progress">
             <div class="progress-track">
@@ -162,6 +168,16 @@
             Play again
           </button>
         </div>
+
+        <aside class="question-drawer hidden" id="questionDrawer" aria-label="Question list">
+          <div class="drawer-header">
+            <h2>Questions</h2>
+            <button class="icon-button" id="closeQuestionDrawerButton" type="button" aria-label="Close question list">
+              ×
+            </button>
+          </div>
+          <div class="drawer-list" id="drawerQuestionList"></div>
+        </aside>
       </section>
     </main>
 

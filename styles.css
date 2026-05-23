@@ -30,6 +30,20 @@ body {
   letter-spacing: 0;
 }
 
+body.game-active {
+  overflow: hidden;
+}
+
+body.game-active .app-shell {
+  width: 100%;
+  height: 100dvh;
+  padding: 14px;
+}
+
+body.game-active .game-view {
+  height: calc(100dvh - 28px);
+}
+
 button,
 input,
 select,
@@ -384,13 +398,15 @@ button:focus-visible {
 
 .game-view {
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 18px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(8px, 1.6vh, 18px);
+  position: relative;
+  overflow: hidden;
 }
 
 .game-topbar {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) 82px 64px 64px;
+  grid-template-columns: 64px 64px 64px minmax(0, 1fr) 82px 64px 64px;
   gap: 18px;
   align-items: center;
 }
@@ -453,14 +469,14 @@ button:focus-visible {
   align-content: safe center;
   justify-items: center;
   min-height: 0;
-  padding: clamp(16px, 4vw, 44px);
+  padding: clamp(8px, 3vw, 32px);
   text-align: center;
 }
 
 .prompt-emoji {
   min-height: 1.2em;
-  margin-bottom: 18px;
-  font-size: clamp(5.5rem, 14vw, 12rem);
+  margin-bottom: clamp(6px, 1.5vh, 18px);
+  font-size: clamp(3.5rem, 10vh, 8rem);
   line-height: 1;
 }
 
@@ -473,9 +489,9 @@ button:focus-visible {
 
 .question-prompt {
   max-width: 100%;
-  margin-bottom: clamp(22px, 4vw, 42px);
+  margin-bottom: clamp(12px, 2.4vh, 30px);
   overflow-wrap: anywhere;
-  font-size: clamp(3.2rem, 11vw, 9rem);
+  font-size: clamp(2.8rem, 11vh, 7rem);
   line-height: 1.04;
 }
 
@@ -487,13 +503,13 @@ button:focus-visible {
 }
 
 .answer-button {
-  min-height: clamp(92px, 14vw, 150px);
+  min-height: clamp(70px, 13vh, 130px);
   border: 4px solid transparent;
   border-radius: 8px;
   background: var(--panel);
   box-shadow: var(--shadow);
   color: var(--ink);
-  font-size: clamp(1.7rem, 4vw, 4rem);
+  font-size: clamp(1.5rem, 5vh, 3.5rem);
   font-weight: 700;
   overflow-wrap: anywhere;
 }
@@ -527,6 +543,55 @@ button:focus-visible {
   gap: 14px;
   width: min(760px, 100%);
   margin: 0 auto;
+}
+
+.question-drawer {
+  position: absolute;
+  inset: 0 0 0 auto;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  width: min(420px, 100%);
+  padding: 18px;
+  border-left: 2px solid var(--line);
+  background: var(--panel);
+  box-shadow: -18px 0 38px rgba(19, 32, 26, 0.16);
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.drawer-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.drawer-question-button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 56px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfc;
+  color: var(--ink);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 700;
+}
+
+.drawer-question-button.active {
+  border-color: var(--accent);
+  background: #dff7eb;
 }
 
 .reveal-button {
@@ -588,18 +653,19 @@ button:focus-visible {
   }
 
   .game-topbar {
-    grid-template-columns: 58px minmax(0, 1fr) 68px 58px 58px;
+    grid-template-columns: repeat(3, 46px) minmax(0, 1fr) 54px repeat(2, 46px);
     gap: 10px;
   }
 
   .icon-button,
   .timer {
-    width: 58px;
-    height: 58px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.45rem;
   }
 
   .timer {
-    width: 68px;
+    width: 54px;
   }
 }
 

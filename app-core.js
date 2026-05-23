@@ -122,9 +122,9 @@
     return items[Math.floor(Math.random() * items.length)];
   }
 
-  function chooseDistractors(correct, pool, count) {
-    const options = shuffle(pool.filter((item) => item !== correct));
-    const fallbacks = shuffle(commonWords.filter((item) => item !== correct));
+  function chooseDistractors(correct, pool, count, isAllowed = () => true) {
+    const options = shuffle(pool.filter((item) => item !== correct && isAllowed(item)));
+    const fallbacks = shuffle(commonWords.filter((item) => item !== correct && isAllowed(item)));
     return [...options, ...fallbacks].filter(unique).slice(0, count);
   }
 
@@ -165,6 +165,11 @@
     return item.emoji || "";
   }
 
+  function matchesFillPrompt(word, prompt) {
+    if (word.length !== prompt.length) return false;
+    return [...prompt].every((letter, index) => letter === "_" || letter === word[index]);
+  }
+
   function makeFillBlankQuestion(entry, entries, index) {
     const word = getWord(entry);
     const words = entries.map(getWord);
@@ -175,7 +180,12 @@
     const missingIndex = randomItem(letterIndexes);
     chars[missingIndex] = "_";
     const prompt = chars.join("");
-    const distractors = chooseDistractors(word, words, 2);
+    const distractors = chooseDistractors(
+      word,
+      words,
+      2,
+      (candidate) => !matchesFillPrompt(candidate, prompt),
+    );
 
     return {
       id: createId(),
@@ -347,6 +357,7 @@
     readableOptions,
     buildQuestions,
     makeFillBlankQuestion,
+    matchesFillPrompt,
     makeStartLetterQuestion,
     makeUnscrambleQuestion,
     buildUnscrambleFrames,

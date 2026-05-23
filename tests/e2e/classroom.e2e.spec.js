@@ -12,8 +12,10 @@ let serverStartError;
 async function loadPlaywright(t) {
   try {
     playwright = require("playwright");
+    return true;
   } catch {
     t.skip("Playwright is not installed; run `npm install --save-dev playwright` to enable E2E specs.");
+    return false;
   }
 }
 
@@ -32,7 +34,7 @@ describe("e2e: classroom game flow", () => {
 
   test("teacher can generate, reveal, and advance a classroom question", async (t) => {
     if (serverStartError) return t.skip(serverStartError.message);
-    await loadPlaywright(t);
+    if (!(await loadPlaywright(t))) return;
 
     const browser = await playwright.chromium.launch();
     const page = await browser.newPage();
@@ -60,7 +62,7 @@ describe("e2e: classroom game flow", () => {
 
   test("visual toggle hides visual clues except on image-only questions", async (t) => {
     if (serverStartError) return t.skip(serverStartError.message);
-    await loadPlaywright(t);
+    if (!(await loadPlaywright(t))) return;
 
     const browser = await playwright.chromium.launch();
     const page = await browser.newPage();

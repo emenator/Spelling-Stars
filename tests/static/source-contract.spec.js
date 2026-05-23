@@ -49,6 +49,6 @@ describe("static: source contracts", () => {
   test("keeps the game readable and centered for projection", () => {
     assert.match(html, /Atkinson\+Hyperlegible/);
     assert.match(css, /\.quiz-stage\s*{[\s\S]*justify-items:\s*center;[\s\S]*text-align:\s*center;/);
-    assert.match(css, /\.question-prompt\s*{[\s\S]*font-size:\s*clamp\(3\.2rem, 11vw, 9rem\);/);
+    assert.match(css, /\.question-prompt\s*{[\s\S]*font-size:\s*clamp\(2\.8rem, 11vh, 7rem\);/);
   });
 });

@@ -117,6 +117,17 @@ describe("spelling quiz generation clarifications", () => {
     assert.ok(question.options.includes("spelling"));
   });
 
+  test("missing-letter options do not include multiple words that fit the same blank", () => {
+    Math.random = () => 0;
+    const entries = ["cap", "map", "lap", "tap", "dog"].map((word) => ({ word, emoji: "" }));
+    const question = core.makeFillBlankQuestion(entries[0], entries, 0);
+    const matchingOptions = question.options.filter((option) =>
+      core.matchesFillPrompt(option, question.prompt),
+    );
+
+    assert.deepEqual(matchingOptions, [question.answer]);
+  });
+
   test("missing-letter questions can scramble which letter position is missing", () => {
     Math.random = () => 0;
     const firstLetterMissing = core.makeFillBlankQuestion("spelling", words, 0).prompt;
@@ -288,7 +299,28 @@ describe("spelling quiz UI clarifications", () => {
 
   test("places the corner next button in the right side of the game topbar", () => {
     assert.match(html, /id="timer"[\s\S]*id="cornerNextButton"/);
-    assert.match(css, /\.game-topbar\s*{[\s\S]*grid-template-columns:\s*64px minmax\(0, 1fr\) 82px 64px 64px;/);
+    assert.match(css, /\.game-topbar\s*{[\s\S]*grid-template-columns:\s*64px 64px 64px minmax\(0, 1fr\) 82px 64px 64px;/);
+  });
+
+  test("has home, previous-question, and question drawer navigation", () => {
+    assert.match(html, /id="homeButton"[\s\S]*aria-label="Home"/);
+    assert.match(html, /id="previousQuestionButton"[\s\S]*aria-label="Previous question"/);
+    assert.match(html, /id="questionMenuButton"[\s\S]*aria-label="Open question list"/);
+    assert.match(html, /id="questionDrawer"/);
+    assert.match(app, /function goPrevious\(\)/);
+    assert.match(app, /function renderQuestionDrawer\(\)/);
+  });
+
+  test("autosaves setup edits locally as a draft", () => {
+    assert.match(app, /const DRAFT_KEY = "spellingQuizDraft";/);
+    assert.match(app, /function saveDraft\(\)/);
+    assert.match(app, /function loadDraft\(\)/);
+    assert.match(app, /localStorage\.setItem\(\s*DRAFT_KEY/);
+  });
+
+  test("locks the game view to the screen without page scrolling", () => {
+    assert.match(css, /body\.game-active\s*{[\s\S]*overflow:\s*hidden;/);
+    assert.match(css, /body\.game-active \.game-view\s*{[\s\S]*height:\s*calc\(100dvh - 28px\);/);
   });
 
   test("has an in-game visual clue toggle that keeps image-only questions visible", () => {
@@ -302,7 +334,7 @@ describe("spelling quiz UI clarifications", () => {
     assert.match(html, /Atkinson\+Hyperlegible/);
     assert.match(css, /font-family:\s*"Atkinson Hyperlegible"/);
     assert.match(css, /\.quiz-stage\s*{[\s\S]*align-content:\s*safe center;[\s\S]*justify-items:\s*center;[\s\S]*text-align:\s*center;/);
-    assert.match(css, /\.question-prompt\s*{[\s\S]*font-size:\s*clamp\(3\.2rem, 11vw, 9rem\);/);
+    assert.match(css, /\.question-prompt\s*{[\s\S]*font-size:\s*clamp\(2\.8rem, 11vh, 7rem\);/);
   });
 
   test("keeps emoji prompts visible in compact classroom layouts", () => {
