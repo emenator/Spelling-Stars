@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "test": "node --test tests/unit/*.unit.spec.js tests/static/*.spec.js tests/*.spec.js",
+    "test:all": "node --test tests/**/*.spec.js tests/*.spec.js",
+    "test:e2e": "node --test tests/e2e/*.e2e.spec.js",
+    "test:fast": "node --test tests/unit/*.unit.spec.js tests/static/*.spec.js tests/*.spec.js",
+    "test:hosting": "node --test tests/request/*.request.spec.js"
+  }
+}

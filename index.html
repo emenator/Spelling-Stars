@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spelling Quiz Show</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="setup-view" id="setupView" aria-labelledby="appTitle">
+        <div class="setup-header">
+          <div>
+            <p class="eyebrow">Spelling quiz show</p>
+            <h1 id="appTitle">Build a spelling game from your word list</h1>
+          </div>
+          <div class="mode-toggle" aria-label="Choose game mode">
+            <button class="mode-button" id="autoModeButton" type="button">
+              Auto
+            </button>
+            <button class="mode-button active" id="classroomModeButton" type="button">
+              Classroom
+            </button>
+          </div>
+        </div>
+
+        <div class="setup-grid">
+          <section class="word-panel" aria-labelledby="wordListTitle">
+            <div class="panel-title-row">
+              <h2 id="wordListTitle">Your 10 words</h2>
+              <button class="sample-button" id="sampleButton" type="button">
+                Try sample list
+              </button>
+            </div>
+            <textarea
+              id="wordInput"
+              rows="10"
+              spellcheck="false"
+              aria-label="Enter 10 spelling words, one per line"
+              placeholder="cat&#10;dog&#10;sun&#10;..."
+            ></textarea>
+            <div class="library-panel" aria-labelledby="libraryTitle">
+              <h3 id="libraryTitle">Classroom word lists</h3>
+              <div class="save-row">
+                <select class="save-select" id="librarySelect" aria-label="Choose a classroom word list">
+                  <option value="">Choose a cluster</option>
+                </select>
+                <button class="small-button" id="loadLibraryButton" type="button">
+                  Load
+                </button>
+              </div>
+            </div>
+            <div class="visual-panel" aria-labelledby="visualCluesTitle">
+              <div class="panel-title-row visual-title-row">
+                <h3 id="visualCluesTitle">Visual clues</h3>
+                <div class="visual-actions">
+                  <button class="small-button" id="suggestVisualsButton" type="button">
+                    Suggest
+                  </button>
+                  <button class="small-button" id="clearVisualsButton" type="button">
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div class="visual-list" id="visualList">
+                <p class="empty-state">Enter words to review visual clues.</p>
+              </div>
+            </div>
+            <div class="save-panel" aria-labelledby="savedListsTitle">
+              <h3 id="savedListsTitle">Saved lists</h3>
+              <div class="save-row">
+                <input
+                  class="save-input"
+                  id="saveNameInput"
+                  type="text"
+                  aria-label="Saved list name"
+                  placeholder="List name"
+                />
+                <button class="small-button" id="saveListButton" type="button">
+                  Save
+                </button>
+              </div>
+              <div class="save-row">
+                <select class="save-select" id="savedListSelect" aria-label="Choose a saved list">
+                  <option value="">No saved lists</option>
+                </select>
+                <button class="small-button" id="loadListButton" type="button">
+                  Load
+                </button>
+                <button class="small-button danger-button" id="deleteListButton" type="button">
+                  Delete
+                </button>
+              </div>
+              <p class="helper save-status" id="saveStatus">Saved lists stay in this browser.</p>
+            </div>
+            <p class="helper" id="wordCount">0 words entered · add 3 more to generate</p>
+            <button class="primary-button" id="generateButton" type="button">
+              Generate questions
+            </button>
+          </section>
+
+          <section class="question-panel" aria-labelledby="questionListTitle">
+            <div class="panel-title-row">
+              <h2 id="questionListTitle">Question set</h2>
+              <span class="question-count" id="questionCount">0 kept</span>
+            </div>
+            <div class="question-list" id="questionList">
+              <p class="empty-state">Add 10 words to generate the quiz.</p>
+            </div>
+            <button class="primary-button" id="startButton" type="button" disabled>
+              Start game
+            </button>
+          </section>
+        </div>
+      </section>
+
+      <section class="game-view hidden" id="gameView" aria-live="polite">
+        <div class="game-topbar">
+          <button class="icon-button" id="backButton" type="button" aria-label="Back to setup">
+            ←
+          </button>
+          <div class="progress-wrap" aria-label="Quiz progress">
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="progressText">Question 1 of 25</p>
+          </div>
+          <div class="timer" id="timer">10</div>
+          <button class="icon-button visual-toggle active" id="visualToggleButton" type="button" aria-label="Hide visual clues">
+            👁
+          </button>
+          <button class="icon-button" id="cornerNextButton" type="button" aria-label="Next question">
+            →
+          </button>
+        </div>
+
+        <div class="quiz-stage" id="quizStage">
+          <div class="prompt-emoji" id="promptEmoji" aria-hidden="true">✨</div>
+          <p class="question-type" id="questionType">What word matches?</p>
+          <h2 class="question-prompt" id="questionPrompt">w _ rd</h2>
+          <div class="answer-grid" id="answerGrid"></div>
+          <p class="feedback" id="feedback"></p>
+        </div>
+
+        <div class="classroom-controls hidden" id="classroomControls">
+          <button class="primary-button reveal-button" id="revealButton" type="button">
+            Reveal answer
+          </button>
+          <button class="primary-button" id="nextButton" type="button">Next question</button>
+        </div>
+
+        <div class="results hidden" id="results">
+          <p class="eyebrow">All done</p>
+          <h2 id="scoreText">Score: 0 / 25</h2>
+          <button class="primary-button" id="playAgainButton" type="button">
+            Play again
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script src="app-data.js"></script>
+    <script src="app-core.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
