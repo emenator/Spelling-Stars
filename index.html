@@ -71,6 +71,35 @@
                 />
               </label>
             </div>
+            <div class="question-mix-panel" id="questionMixPanel" aria-labelledby="questionMixTitle">
+              <div class="panel-title-row">
+                <h3 id="questionMixTitle">Question mix</h3>
+                <button class="small-button" id="resetMixButton" type="button">
+                  Reset to auto
+                </button>
+              </div>
+              <label class="setting-row">
+                <span>What word matches?</span>
+                <input class="number-input" id="mixFillInput" type="number" min="0" value="0" aria-label="How many 'what word matches' questions" />
+              </label>
+              <label class="setting-row">
+                <span>Which word starts with…?</span>
+                <input class="number-input" id="mixStartInput" type="number" min="0" value="0" aria-label="How many 'starts with' questions" />
+              </label>
+              <label class="setting-row">
+                <span>Unscramble</span>
+                <input class="number-input" id="mixUnscrambleInput" type="number" min="0" value="0" aria-label="How many unscramble questions" />
+              </label>
+              <label class="setting-row">
+                <span>What word is this?</span>
+                <input class="number-input" id="mixImageInput" type="number" min="0" value="0" aria-label="How many 'what word is this' questions" />
+              </label>
+              <label class="setting-row">
+                <span>How do you spell this?</span>
+                <input class="number-input" id="mixSpellInput" type="number" min="0" value="0" aria-label="How many 'how do you spell this' questions" />
+              </label>
+              <p class="helper">Set any type to 0 to leave it out. "Generate questions" uses these counts.</p>
+            </div>
             <div class="visual-panel" aria-labelledby="visualCluesTitle">
               <div class="panel-title-row visual-title-row">
                 <h3 id="visualCluesTitle">Visual clues</h3>
@@ -219,6 +248,7 @@
       </section>
     </main>
 
+    <script src="profanity.js"></script>
     <script src="app-data.js"></script>
     <script src="app-core.js"></script>
     <script src="app.js"></script>

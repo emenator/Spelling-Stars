@@ -43,7 +43,6 @@
     egg: "🥚",
     fish: "🐟",
     flower: "🌸",
-    for: "4️⃣",
     frog: "🐸",
     gift: "🎁",
     goat: "🐐",
@@ -110,6 +109,17 @@
     "block",
     "rock",
   ];
+
+  const INAPPROPRIATE_WORDS =
+    (typeof require !== "undefined" ? require("./profanity.js") : root.SpellingProfanity) || [];
+
+  const VOWEL_SWAPS = {
+    a: ["e", "u"],
+    e: ["a", "i"],
+    i: ["e", "y"],
+    o: ["u", "oo"],
+    u: ["oo", "o"],
+  };
 
   let idCounter = 0;
 
@@ -273,7 +283,16 @@
     const letter = word[0];
     const sameLetter = words.filter((item) => item[0] === letter && item !== word);
     const correct = sameLetter[0] || word;
-    const distractors = chooseDistractors(correct, words.filter((item) => item[0] !== letter), 2);
+    const differsInLetter = (candidate) => candidate[0] !== letter;
+
+    const listCandidates = words.filter((item) => item !== correct && differsInLetter(item));
+    const fromList = [...listCandidates]
+      .map((item) => ({ item, score: similarityScore(correct, item) }))
+      .sort((left, right) => left.score - right.score || left.item.localeCompare(right.item))
+      .map(({ item }) => item)
+      .slice(0, 2);
+    const distractors =
+      fromList.length >= 2 ? fromList : chooseDistractors(correct, listCandidates, 2, differsInLetter);
 
     const correctEntry = entries.find((item) => getWord(item) === correct) || entry;
 
@@ -300,6 +319,67 @@
       word,
       emoji: getVisual(entry, index),
       typeLabel: "What word is this?",
+      prompt: "",
+      options: shuffle([word, ...distractors]),
+      answer: word,
+    };
+  }
+
+  function isInappropriate(candidate) {
+    return INAPPROPRIATE_WORDS.some((bad) => candidate.includes(bad));
+  }
+
+  function spellingVariants(word) {
+    const variants = [];
+    const letters = [...word];
+
+    letters.forEach((letter, index) => {
+      (VOWEL_SWAPS[letter] || []).forEach((replacement) => {
+        variants.push(word.slice(0, index) + replacement + word.slice(index + 1));
+      });
+    });
+
+    variants.push(`${word}e`);
+
+    letters.forEach((letter, index) => {
+      if (!"aeiou".includes(letter)) {
+        variants.push(word.slice(0, index + 1) + letter + word.slice(index + 1));
+      }
+    });
+
+    for (let index = 0; index < letters.length - 1; index += 1) {
+      const swapped = [...letters];
+      [swapped[index], swapped[index + 1]] = [swapped[index + 1], swapped[index]];
+      variants.push(swapped.join(""));
+    }
+
+    return variants;
+  }
+
+  function misspell(word, count) {
+    const seen = new Set([word]);
+    const results = [];
+
+    for (const variant of spellingVariants(word)) {
+      if (results.length >= count) break;
+      if (variant === word || seen.has(variant) || isInappropriate(variant)) continue;
+      seen.add(variant);
+      results.push(variant);
+    }
+
+    return results;
+  }
+
+  function makeSpellQuestion(entry, entries, index) {
+    const word = getWord(entry);
+    const distractors = misspell(word, 2);
+
+    return {
+      id: createId(),
+      kind: "spell",
+      word,
+      emoji: getVisual(entry, index),
+      typeLabel: "How do you spell this word?",
       prompt: "",
       options: shuffle([word, ...distractors]),
       answer: word,
@@ -359,7 +439,9 @@
   function makeUnscrambleQuestion(entry, entries, index) {
     const word = getWord(entry);
     const words = entries.map(getWord);
-    const distractors = chooseDistractors(word, words, 2);
+    const sortedLetters = [...word].sort().join("");
+    const notAnagram = (candidate) => [...candidate].sort().join("") !== sortedLetters;
+    const distractors = chooseDistractors(word, words, 2, notAnagram);
     const scrambleFrames = buildUnscrambleFrames(word);
 
     return {
@@ -387,12 +469,15 @@
         start: 0,
         unscramble: 0,
         image: 0,
+        spell: 0,
         total: 0,
       };
     }
 
-    const image = Math.min(wordCount, Math.max(0, visualWordCount));
-    const missingImageCount = wordCount - image;
+    const visual = Math.min(wordCount, Math.max(0, visualWordCount));
+    const missingImageCount = wordCount - visual;
+    const image = Math.ceil(visual / 2);
+    const spell = Math.floor(visual / 2);
     const plan = {
       fill: scaledCount(wordCount, FILL_BLANK_COUNT) + Math.ceil(missingImageCount / 3),
       start: scaledCount(wordCount, START_LETTER_COUNT) + Math.floor(missingImageCount / 3),
@@ -402,18 +487,32 @@
         Math.ceil(missingImageCount / 3) -
         Math.floor(missingImageCount / 3),
       image,
+      spell,
     };
 
     return {
       ...plan,
-      total: plan.fill + plan.start + plan.unscramble + plan.image,
+      total: plan.fill + plan.start + plan.unscramble + plan.image + plan.spell,
     };
   }
 
-  function buildQuestions(items, visualHints) {
+  function clampPlanToWords(mix, wordCount, visualCount) {
+    const clamp = (value, max) => Math.min(Math.max(0, Math.floor(value) || 0), max);
+    return {
+      fill: clamp(mix.fill, wordCount),
+      start: clamp(mix.start, wordCount),
+      unscramble: clamp(mix.unscramble, wordCount),
+      image: clamp(mix.image, visualCount),
+      spell: clamp(mix.spell, visualCount),
+    };
+  }
+
+  function buildQuestions(items, visualHints, mix) {
     const entries = normalizeQuestionEntries(items, visualHints);
     const visualEntries = entries.filter((entry) => entry.emoji);
-    const questionPlan = getQuestionPlan(entries.length, visualEntries.length);
+    const questionPlan = mix
+      ? clampPlanToWords(mix, entries.length, visualEntries.length)
+      : getQuestionPlan(entries.length, visualEntries.length);
     const shuffledEntries = shuffle(entries);
     const fillEntries = shuffledEntries.slice(0, questionPlan.fill);
     const startEntries = shuffledEntries.slice(0, questionPlan.start);
@@ -423,13 +522,15 @@
       ...shuffledEntries.filter((entry) => !longerEntries.includes(entry)),
     ].slice(0, questionPlan.unscramble);
     const imageEntries = shuffle(visualEntries).slice(0, questionPlan.image);
+    const spellEntries = shuffle(visualEntries).slice(0, questionPlan.spell);
     const fill = fillEntries.map((entry, index) => makeFillBlankQuestion(entry, entries, index));
     const start = startEntries.map((entry, index) => makeStartLetterQuestion(entry, entries, index));
     const unscramble = unscrambleEntries.map((entry, index) =>
       makeUnscrambleQuestion(entry, entries, index),
     );
     const image = imageEntries.map((entry, index) => makeImageQuestion(entry, entries, index));
-    return [...fill, ...start, ...unscramble, ...image];
+    const spell = spellEntries.map((entry, index) => makeSpellQuestion(entry, entries, index));
+    return [...fill, ...start, ...unscramble, ...image, ...spell];
   }
 
   function resetIdsForTests() {
@@ -463,6 +564,9 @@
     similarityScore,
     similarWords,
     makeImageQuestion,
+    INAPPROPRIATE_WORDS,
+    misspell,
+    makeSpellQuestion,
     resetIdsForTests,
   };
 
