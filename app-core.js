@@ -93,6 +93,22 @@
     "pen",
     "log",
     "bed",
+    "lap",
+    "tap",
+    "cap",
+    "nap",
+    "pan",
+    "fan",
+    "van",
+    "ship",
+    "shop",
+    "chop",
+    "truck",
+    "duck",
+    "stuck",
+    "clock",
+    "block",
+    "rock",
   ];
 
   let idCounter = 0;
@@ -122,10 +138,54 @@
     return items[Math.floor(Math.random() * items.length)];
   }
 
+  function getDatasetWords() {
+    const clusters = root.SpellingQuizData?.clusters || [];
+    return clusters.flatMap((cluster) => cluster.words || []);
+  }
+
+  function editDistance(left, right) {
+    const rows = Array.from({ length: left.length + 1 }, () => Array(right.length + 1).fill(0));
+    for (let row = 0; row <= left.length; row += 1) rows[row][0] = row;
+    for (let column = 0; column <= right.length; column += 1) rows[0][column] = column;
+
+    for (let row = 1; row <= left.length; row += 1) {
+      for (let column = 1; column <= right.length; column += 1) {
+        const cost = left[row - 1] === right[column - 1] ? 0 : 1;
+        rows[row][column] = Math.min(
+          rows[row - 1][column] + 1,
+          rows[row][column - 1] + 1,
+          rows[row - 1][column - 1] + cost,
+        );
+      }
+    }
+
+    return rows[left.length][right.length];
+  }
+
+  function similarityScore(target, candidate) {
+    const lengthGap = Math.abs(target.length - candidate.length);
+    const startsSame = target[0] === candidate[0] ? -2 : 0;
+    const endingSize = Math.min(3, target.length, candidate.length);
+    const endingsSame = target.slice(-endingSize) === candidate.slice(-endingSize) ? -4 : 0;
+    const rhymeSame = target.slice(-2) === candidate.slice(-2) ? -3 : 0;
+    return editDistance(target, candidate) + lengthGap + startsSame + endingsSame + rhymeSame;
+  }
+
+  function similarWords(correct, pool, count, isAllowed = () => true) {
+    const candidates = [...pool, ...commonWords, ...getDatasetWords()]
+      .map(normalizeWord)
+      .filter((item) => item && item !== correct && isAllowed(item))
+      .filter(unique);
+
+    return candidates
+      .map((item) => ({ item, score: similarityScore(correct, item) }))
+      .sort((left, right) => left.score - right.score || left.item.localeCompare(right.item))
+      .map(({ item }) => item)
+      .slice(0, count);
+  }
+
   function chooseDistractors(correct, pool, count, isAllowed = () => true) {
-    const options = shuffle(pool.filter((item) => item !== correct && isAllowed(item)));
-    const fallbacks = shuffle(commonWords.filter((item) => item !== correct && isAllowed(item)));
-    return [...options, ...fallbacks].filter(unique).slice(0, count);
+    return similarWords(correct, pool, count, isAllowed);
   }
 
   function createId() {
@@ -170,6 +230,12 @@
     return [...prompt].every((letter, index) => letter === "_" || letter === word[index]);
   }
 
+  function missingLetterCount(word) {
+    if (word.length >= 9) return 3;
+    if (word.length >= 6) return 2;
+    return 1;
+  }
+
   function makeFillBlankQuestion(entry, entries, index) {
     const word = getWord(entry);
     const words = entries.map(getWord);
@@ -177,8 +243,10 @@
     const letterIndexes = chars
       .map((letter, letterIndex) => (/[a-z]/.test(letter) ? letterIndex : null))
       .filter((letterIndex) => letterIndex !== null);
-    const missingIndex = randomItem(letterIndexes);
-    chars[missingIndex] = "_";
+    const missingIndexes = shuffle(letterIndexes).slice(0, Math.min(missingLetterCount(word), letterIndexes.length));
+    missingIndexes.forEach((missingIndex) => {
+      chars[missingIndex] = "_";
+    });
     const prompt = chars.join("");
     const distractors = chooseDistractors(
       word,
@@ -251,12 +319,41 @@
   }
 
   function buildUnscrambleFrames(word) {
-    return Array.from({ length: ANSWER_SECONDS + 1 }, (_, elapsedSeconds) => {
-      const correctCount = Math.ceil((elapsedSeconds / ANSWER_SECONDS) * word.length);
-      const fixed = word.slice(0, correctCount);
-      const remaining = word.slice(correctCount);
-      return `${fixed}${scrambleLetters(remaining)}`;
-    });
+    const frames = [];
+    const letters = [...word];
+    const maxSwaps = Math.min(ANSWER_SECONDS, Math.max(1, letters.length - 1));
+    const start = [...letters];
+
+    for (let index = 0; index < maxSwaps; index += 1) {
+      const from = index;
+      const to = letters.length - 1 - index;
+      if (from < to) {
+        [start[from], start[to]] = [start[to], start[from]];
+      }
+    }
+
+    if (start.join("") === word && letters.length > 2) {
+      [start[1], start[2]] = [start[2], start[1]];
+    }
+
+    frames.push(start.join(""));
+    const current = [...start];
+
+    for (let step = 1; step <= ANSWER_SECONDS; step += 1) {
+      const targetIndex = step === 1 ? 0 : current.findIndex((letter, index) => letter !== letters[index]);
+      if (targetIndex >= 0) {
+        const swapIndex = current.findIndex(
+          (letter, index) => index !== targetIndex && letter === letters[targetIndex],
+        );
+        if (swapIndex >= 0) {
+          [current[targetIndex], current[swapIndex]] = [current[swapIndex], current[targetIndex]];
+        }
+      }
+      frames.push(current.join(""));
+    }
+
+    frames[frames.length - 1] = word;
+    return frames;
   }
 
   function makeUnscrambleQuestion(entry, entries, index) {
@@ -358,9 +455,13 @@
     buildQuestions,
     makeFillBlankQuestion,
     matchesFillPrompt,
+    missingLetterCount,
     makeStartLetterQuestion,
     makeUnscrambleQuestion,
     buildUnscrambleFrames,
+    editDistance,
+    similarityScore,
+    similarWords,
     makeImageQuestion,
     resetIdsForTests,
   };

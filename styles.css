@@ -224,7 +224,9 @@ textarea {
 }
 
 .library-panel,
-.save-panel {
+.save-panel,
+.timing-panel,
+.custom-question-form {
   display: grid;
   gap: 10px;
   margin-top: 18px;
@@ -232,6 +234,44 @@ textarea {
   border: 2px solid var(--line);
   border-radius: 8px;
   background: #fbfdfc;
+}
+
+.setting-row,
+.custom-question-row {
+  display: grid;
+  gap: 10px;
+}
+
+.setting-row {
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: center;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.number-input {
+  min-height: 42px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 10px;
+  text-align: center;
+}
+
+.custom-question-form {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.custom-question-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) 48px;
+}
+
+.add-question-button {
+  min-width: 48px;
+  padding: 0;
+  font-size: 1.6rem;
 }
 
 .save-row {
@@ -470,7 +510,35 @@ button:focus-visible {
   justify-items: center;
   min-height: 0;
   padding: clamp(8px, 3vw, 32px);
+  position: relative;
   text-align: center;
+}
+
+.confetti-layer {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -24px;
+  left: var(--left);
+  width: 12px;
+  height: 18px;
+  border-radius: 3px;
+  background: var(--color);
+  animation: confetti-fall 1800ms ease-out forwards;
+  transform: rotate(var(--rotate));
+}
+
+@keyframes confetti-fall {
+  to {
+    top: 72%;
+    opacity: 0;
+    transform: translateX(var(--drift)) rotate(calc(var(--rotate) + 240deg));
+  }
 }
 
 .prompt-emoji {
@@ -576,7 +644,7 @@ button:focus-visible {
 
 .drawer-question-button {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: center;
   min-height: 56px;
@@ -587,6 +655,26 @@ button:focus-visible {
   padding: 8px 10px;
   text-align: left;
   font-weight: 700;
+}
+
+.drawer-status {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #edf4ef;
+  font-size: 1.2rem;
+}
+
+.drawer-status.correct {
+  background: #dff7eb;
+  color: var(--good);
+}
+
+.drawer-status.incorrect {
+  background: #ffe8e5;
+  color: var(--bad);
 }
 
 .drawer-question-button.active {
@@ -645,6 +733,11 @@ button:focus-visible {
   }
 
   .answer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-question-row,
+  .setting-row {
     grid-template-columns: 1fr;
   }
 

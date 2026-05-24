@@ -49,19 +49,30 @@ describe("unit: quiz generation engine", () => {
     );
   });
 
-  test("creates one blank in missing-letter questions", () => {
-    const question = core.makeFillBlankQuestion("spelling", words, 0);
+  test("creates tiered blanks by word length in missing-letter questions", () => {
+    assert.equal(core.missingLetterCount("cat"), 1);
+    assert.equal(core.missingLetterCount("plant"), 1);
+    assert.equal(core.missingLetterCount("friend"), 2);
+    assert.equal(core.missingLetterCount("classroom"), 3);
+
+    const question = core.makeFillBlankQuestion("classroom", words, 0);
 
     assert.equal(question.kind, "fill");
-    assert.equal([...question.prompt].filter((character) => character === "_").length, 1);
-    assert.equal(question.answer, "spelling");
+    assert.equal([...question.prompt].filter((character) => character === "_").length, 3);
+    assert.equal(question.answer, "classroom");
   });
 
-  test("unscramble frames end on the correct spelling", () => {
+  test("unscramble frames swap no more than two positions and end on the correct spelling", () => {
     const question = core.makeUnscrambleQuestion("spelling", words, 0);
 
     assert.equal(question.scrambleFrames.length, core.ANSWER_SECONDS + 1);
     assert.notEqual(question.scrambleFrames[0], "spelling");
     assert.equal(question.scrambleFrames.at(-1), "spelling");
+    for (let index = 1; index < question.scrambleFrames.length; index += 1) {
+      const changed = [...question.scrambleFrames[index]].filter(
+        (letter, letterIndex) => letter !== question.scrambleFrames[index - 1][letterIndex],
+      );
+      assert.ok(changed.length <= 2);
+    }
   });
 });

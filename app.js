@@ -12,6 +12,7 @@ const {
 
 const SAVE_KEY = "spellingQuizSavedLists";
 const DRAFT_KEY = "spellingQuizDraft";
+const LIBRARY_OVERRIDE_KEY = "spellingQuizLibraryOverrides";
 
 const setupView = document.querySelector("#setupView");
 const gameView = document.querySelector("#gameView");
@@ -24,6 +25,7 @@ const clearVisualsButton = document.querySelector("#clearVisualsButton");
 const visualList = document.querySelector("#visualList");
 const librarySelect = document.querySelector("#librarySelect");
 const loadLibraryButton = document.querySelector("#loadLibraryButton");
+const answerSecondsInput = document.querySelector("#answerSecondsInput");
 const saveNameInput = document.querySelector("#saveNameInput");
 const saveListButton = document.querySelector("#saveListButton");
 const savedListSelect = document.querySelector("#savedListSelect");
@@ -32,6 +34,9 @@ const deleteListButton = document.querySelector("#deleteListButton");
 const saveStatus = document.querySelector("#saveStatus");
 const questionList = document.querySelector("#questionList");
 const questionCount = document.querySelector("#questionCount");
+const customQuestionForm = document.querySelector("#customQuestionForm");
+const customQuestionInput = document.querySelector("#customQuestionInput");
+const customAnswerInput = document.querySelector("#customAnswerInput");
 const startButton = document.querySelector("#startButton");
 const autoModeButton = document.querySelector("#autoModeButton");
 const classroomModeButton = document.querySelector("#classroomModeButton");
@@ -49,6 +54,7 @@ const questionPrompt = document.querySelector("#questionPrompt");
 const answerGrid = document.querySelector("#answerGrid");
 const feedback = document.querySelector("#feedback");
 const quizStage = document.querySelector("#quizStage");
+const confettiLayer = document.querySelector("#confettiLayer");
 const classroomControls = document.querySelector("#classroomControls");
 const revealButton = document.querySelector("#revealButton");
 const nextButton = document.querySelector("#nextButton");
@@ -68,6 +74,8 @@ let selected = false;
 let tickId = null;
 let visualHints = {};
 let showVisualClues = true;
+let answerSeconds = ANSWER_SECONDS;
+let currentLibraryId = "";
 
 function getWords() {
   return parseWords(wordInput.value);
@@ -92,6 +100,18 @@ function setSavedLists(savedLists) {
   localStorage.setItem(SAVE_KEY, JSON.stringify(savedLists));
 }
 
+function getLibraryOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem(LIBRARY_OVERRIDE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function setLibraryOverrides(overrides) {
+  localStorage.setItem(LIBRARY_OVERRIDE_KEY, JSON.stringify(overrides));
+}
+
 function setSaveStatus(message) {
   saveStatus.textContent = message;
 }
@@ -104,6 +124,7 @@ function saveDraft() {
       words,
       visualHints: Object.fromEntries(words.map((word) => [word, visualHints[word] || ""])),
       saveName: saveNameInput.value,
+      answerSeconds,
     }),
   );
 }
@@ -115,9 +136,47 @@ function loadDraft() {
     wordInput.value = draft.words.join("\n");
     visualHints = draft.visualHints || {};
     saveNameInput.value = draft.saveName || "";
+    answerSeconds = Number(draft.answerSeconds) || ANSWER_SECONDS;
+    answerSecondsInput.value = String(answerSeconds);
   } catch {
     localStorage.removeItem(DRAFT_KEY);
   }
+}
+
+function persistLoadedDatasetEdits() {
+  const words = getWords();
+
+  if (currentLibraryId) {
+    const overrides = getLibraryOverrides();
+    overrides[currentLibraryId] = {
+      words,
+      visualHints: Object.fromEntries(words.map((word) => [word, visualHints[word] || ""])),
+      savedAt: new Date().toISOString(),
+    };
+    setLibraryOverrides(overrides);
+    setSaveStatus("Autosaved classroom list changes.");
+  }
+
+  const name = saveNameInput.value.trim();
+  if (!name) return;
+
+  const savedLists = getSavedLists();
+  if (!savedLists[name]) return;
+
+  savedLists[name] = {
+    ...savedLists[name],
+    words,
+    visualHints: Object.fromEntries(words.map((word) => [word, visualHints[word] || ""])),
+    savedAt: new Date().toISOString(),
+  };
+  setSavedLists(savedLists);
+  renderSavedLists(name);
+  setSaveStatus(`Autosaved "${name}".`);
+}
+
+function saveLocalState() {
+  saveDraft();
+  persistLoadedDatasetEdits();
 }
 
 function defaultListName() {
@@ -133,7 +192,7 @@ function renderSavedLists(selectedName = savedListSelect.value) {
   if (names.length === 0) {
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "No saved lists";
+    option.textContent = "No saved datasets";
     savedListSelect.append(option);
   } else {
     names.forEach((name) => {
@@ -165,9 +224,12 @@ function renderLibraryLists() {
 function loadLibraryCluster() {
   const cluster = window.SpellingQuizData?.clusters?.find((item) => item.id === librarySelect.value);
   if (!cluster) return;
+  const override = getLibraryOverrides()[cluster.id];
+  const words = override?.words || cluster.words;
 
-  wordInput.value = cluster.words.join("\n");
-  visualHints = { ...cluster.visualHints };
+  currentLibraryId = cluster.id;
+  wordInput.value = words.join("\n");
+  visualHints = { ...cluster.visualHints, ...(override?.visualHints || {}) };
   saveNameInput.value = cluster.name;
   questions = [];
   renderVisualHints();
@@ -192,6 +254,7 @@ function saveCurrentList() {
     savedAt: new Date().toISOString(),
   };
   setSavedLists(savedLists);
+  currentLibraryId = "";
   saveNameInput.value = name;
   renderSavedLists(name);
   setSaveStatus(`Saved "${name}".`);
@@ -204,6 +267,7 @@ function loadSelectedList() {
   if (!saved) return;
 
   wordInput.value = saved.words.join("\n");
+  currentLibraryId = "";
   visualHints = saved.visualHints || {};
   saveNameInput.value = name;
   renderVisualHints();
@@ -246,7 +310,7 @@ function removeWord(wordToRemove) {
   renderVisualHints();
   renderQuestionList();
   updateWordCount();
-  saveDraft();
+  saveLocalState();
 }
 
 function suggestVisualHints() {
@@ -258,7 +322,7 @@ function suggestVisualHints() {
   });
   renderVisualHints();
   updateWordCount();
-  saveDraft();
+  saveLocalState();
 }
 
 function renderVisualHints() {
@@ -293,7 +357,7 @@ function renderVisualHints() {
     input.addEventListener("input", () => {
       visualHints[word] = input.value.trim();
       updateWordCount();
-      saveDraft();
+      saveLocalState();
     });
     removeButton.addEventListener("click", () => removeWord(word));
     visualList.append(row);
@@ -326,9 +390,35 @@ function renderQuestionList() {
     card.querySelector("button").addEventListener("click", () => {
       questions = questions.filter((item) => item.id !== question.id);
       renderQuestionList();
+      renderQuestionDrawer();
     });
     questionList.append(card);
   });
+}
+
+function addCustomQuestion(event) {
+  event.preventDefault();
+  const prompt = customQuestionInput.value.trim();
+  const answer = customAnswerInput.value.trim().toLowerCase();
+  if (!prompt || !answer) return;
+
+  const pool = getWords();
+  const distractors = pool.filter((word) => word !== answer).slice(0, 2);
+  const fallbackOptions = ["yes", "no", "maybe"].filter((word) => word !== answer);
+  questions.push({
+    id: `custom-${Date.now()}`,
+    kind: "custom",
+    word: answer,
+    emoji: visualHints[answer] || "",
+    typeLabel: prompt,
+    prompt,
+    options: [answer, ...distractors, ...fallbackOptions].filter((item, index, array) => array.indexOf(item) === index).slice(0, 3),
+    answer,
+  });
+  customQuestionInput.value = "";
+  customAnswerInput.value = "";
+  renderQuestionList();
+  renderQuestionDrawer();
 }
 
 function generateQuestions() {
@@ -351,9 +441,9 @@ function clearTimers() {
 }
 
 function startGame() {
-  activeQuestions = [...questions];
+  activeQuestions = questions.map((question) => ({ ...question, selectedAnswer: null, result: null }));
   currentIndex = 0;
-  score = 0;
+  score = deriveScore();
   setupView.classList.add("hidden");
   document.body.classList.add("game-active");
   gameView.classList.remove("hidden");
@@ -367,7 +457,9 @@ function renderCurrentQuestion() {
   selected = false;
   feedback.textContent = "";
   cornerNextButton.classList.remove("hidden");
+  quizStage.classList.remove("hidden");
   classroomControls.classList.add("hidden");
+  results.classList.add("hidden");
   revealButton.disabled = false;
   nextButton.disabled = true;
 
@@ -381,7 +473,7 @@ function renderCurrentQuestion() {
   progressFill.style.width = `${progress}%`;
   progressText.textContent = `Question ${currentIndex + 1} of ${activeQuestions.length}`;
   previousQuestionButton.disabled = currentIndex === 0;
-  timer.textContent = ANSWER_SECONDS;
+  timer.textContent = answerSeconds;
   renderQuestionVisual(question);
   questionType.textContent = question.typeLabel;
   questionPrompt.textContent = question.prompt;
@@ -397,12 +489,19 @@ function renderCurrentQuestion() {
     answerGrid.append(button);
   });
 
+  if (question.selectedAnswer) {
+    showAnswerState(question, question.selectedAnswer);
+    selected = question.result === "correct";
+    nextButton.disabled = false;
+    revealButton.disabled = true;
+  }
+
   if (gameMode === "classroom") {
     classroomControls.classList.remove("hidden");
   }
   renderQuestionDrawer();
 
-  let secondsLeft = ANSWER_SECONDS;
+  let secondsLeft = answerSeconds;
   tickId = window.setInterval(() => {
     secondsLeft -= 1;
     timer.textContent = Math.max(0, secondsLeft);
@@ -440,9 +539,12 @@ function toggleVisualClues() {
 function updateUnscramblePrompt(question, secondsLeft) {
   if (question.kind !== "unscramble") return;
 
-  const elapsedSeconds = ANSWER_SECONDS - Math.max(0, secondsLeft);
-  questionPrompt.textContent =
-    question.scrambleFrames[Math.min(elapsedSeconds, question.scrambleFrames.length - 1)];
+  const elapsedSeconds = answerSeconds - Math.max(0, secondsLeft);
+  const frameIndex = Math.min(
+    Math.round((elapsedSeconds / answerSeconds) * (question.scrambleFrames.length - 1)),
+    question.scrambleFrames.length - 1,
+  );
+  questionPrompt.textContent = question.scrambleFrames[frameIndex];
 }
 
 function chooseAnswer(option) {
@@ -458,17 +560,14 @@ function revealAnswer(option) {
 
   const question = activeQuestions[currentIndex];
   const isCorrect = option === question.answer;
-  if (isCorrect) score += 1;
+  question.selectedAnswer = option || "revealed";
+  question.result = isCorrect ? "correct" : "incorrect";
+  score = deriveScore();
+  if (isCorrect) launchConfetti();
 
-  [...answerGrid.children].forEach((button) => {
-    button.disabled = true;
-    if (button.textContent === question.answer) button.classList.add("correct");
-    if (button.textContent === option && !isCorrect) button.classList.add("incorrect");
-  });
+  showAnswerState(question, option, isCorrect);
+  renderQuestionDrawer();
 
-  feedback.textContent = isCorrect
-    ? `Correct: ${question.answer}`
-    : `Answer: ${question.answer}`;
   timer.textContent = REVEAL_SECONDS;
 
   if (gameMode === "classroom") {
@@ -485,6 +584,39 @@ function revealAnswer(option) {
       goNext();
     }
   }, 1000);
+}
+
+function showAnswerState(question, option, isCorrect = option === question.answer) {
+  [...answerGrid.children].forEach((button) => {
+    button.disabled = true;
+    if (button.textContent === question.answer) button.classList.add("correct");
+    if (button.textContent === option && !isCorrect) button.classList.add("incorrect");
+  });
+
+  feedback.textContent = isCorrect
+    ? `Correct: ${question.answer}`
+    : `Answer: ${question.answer}`;
+}
+
+function deriveScore() {
+  return activeQuestions.filter((question) => question.result === "correct").length;
+}
+
+function launchConfetti() {
+  confettiLayer.innerHTML = "";
+  const colors = ["#087f5b", "#f7b731", "#f76c5e", "#4dabf7", "#845ef7"];
+  for (let index = 0; index < 28; index += 1) {
+    const piece = document.createElement("span");
+    piece.className = "confetti-piece";
+    piece.style.setProperty("--left", `${35 + Math.random() * 30}%`);
+    piece.style.setProperty("--color", colors[index % colors.length]);
+    piece.style.setProperty("--rotate", `${Math.random() * 180}deg`);
+    piece.style.setProperty("--drift", `${Math.random() * 80 - 40}px`);
+    confettiLayer.append(piece);
+  }
+  window.setTimeout(() => {
+    confettiLayer.innerHTML = "";
+  }, 2000);
 }
 
 function goNext() {
@@ -515,9 +647,11 @@ function renderQuestionDrawer() {
     button.className = "drawer-question-button";
     button.classList.toggle("active", index === currentIndex);
     button.type = "button";
+    const mark = question.result === "correct" ? "✓" : question.result === "incorrect" ? "×" : "";
     button.innerHTML = `
       <span>${index + 1}</span>
       <span>${question.typeLabel}<br>${question.emoji || ""} ${question.prompt || question.word}</span>
+      <span class="drawer-status ${question.result || ""}">${mark}</span>
     `;
     button.addEventListener("click", () => goToQuestion(index));
     drawerQuestionList.append(button);
@@ -540,6 +674,8 @@ function showResults() {
   quizStage.classList.add("hidden");
   classroomControls.classList.add("hidden");
   results.classList.remove("hidden");
+  previousQuestionButton.disabled = activeQuestions.length === 0;
+  renderQuestionDrawer();
   timer.textContent = "✓";
   progressText.textContent = `Finished ${activeQuestions.length} questions`;
   scoreText.textContent = `Score: ${score} / ${activeQuestions.length}`;
@@ -556,24 +692,30 @@ function backToSetup() {
 wordInput.addEventListener("input", () => {
   renderVisualHints();
   updateWordCount();
-  saveDraft();
+  saveLocalState();
 });
 generateButton.addEventListener("click", generateQuestions);
 sampleButton.addEventListener("click", () => {
   wordInput.value = sampleWords.join("\n");
   visualHints = {};
+  currentLibraryId = "";
   renderVisualHints();
   updateWordCount();
   generateQuestions();
-  saveDraft();
+  saveLocalState();
 });
 suggestVisualsButton.addEventListener("click", suggestVisualHints);
 clearVisualsButton.addEventListener("click", () => {
   visualHints = Object.fromEntries(getWords().map((word) => [word, ""]));
   renderVisualHints();
   updateWordCount();
-  saveDraft();
+  saveLocalState();
 });
+answerSecondsInput.addEventListener("input", () => {
+  answerSeconds = Math.min(30, Math.max(3, Number(answerSecondsInput.value) || ANSWER_SECONDS));
+  saveLocalState();
+});
+customQuestionForm.addEventListener("submit", addCustomQuestion);
 saveListButton.addEventListener("click", saveCurrentList);
 loadListButton.addEventListener("click", loadSelectedList);
 deleteListButton.addEventListener("click", deleteSelectedList);

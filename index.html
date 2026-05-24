@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spelling Quiz Show</title>
+    <title>Spelling Stars</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,7 +17,7 @@
       <section class="setup-view" id="setupView" aria-labelledby="appTitle">
         <div class="setup-header">
           <div>
-            <p class="eyebrow">Spelling quiz show</p>
+            <p class="eyebrow">Spelling Stars</p>
             <h1 id="appTitle">Build a spelling game from your word list</h1>
           </div>
           <div class="mode-toggle" aria-label="Choose game mode">
@@ -56,6 +56,21 @@
                 </button>
               </div>
             </div>
+            <div class="timing-panel" aria-labelledby="timingTitle">
+              <h3 id="timingTitle">Timing</h3>
+              <label class="setting-row">
+                <span>Seconds before reveal</span>
+                <input
+                  class="number-input"
+                  id="answerSecondsInput"
+                  type="number"
+                  min="3"
+                  max="30"
+                  value="10"
+                  aria-label="Seconds before answer is revealed"
+                />
+              </label>
+            </div>
             <div class="visual-panel" aria-labelledby="visualCluesTitle">
               <div class="panel-title-row visual-title-row">
                 <h3 id="visualCluesTitle">Visual clues</h3>
@@ -73,22 +88,22 @@
               </div>
             </div>
             <div class="save-panel" aria-labelledby="savedListsTitle">
-              <h3 id="savedListsTitle">Saved lists</h3>
+              <h3 id="savedListsTitle">Your datasets</h3>
               <div class="save-row">
                 <input
                   class="save-input"
                   id="saveNameInput"
                   type="text"
-                  aria-label="Saved list name"
-                  placeholder="List name"
+                  aria-label="Dataset name"
+                  placeholder="Dataset name"
                 />
                 <button class="small-button" id="saveListButton" type="button">
                   Save
                 </button>
               </div>
               <div class="save-row">
-                <select class="save-select" id="savedListSelect" aria-label="Choose a saved list">
-                  <option value="">No saved lists</option>
+                <select class="save-select" id="savedListSelect" aria-label="Choose a saved dataset">
+                  <option value="">No saved datasets</option>
                 </select>
                 <button class="small-button" id="loadListButton" type="button">
                   Load
@@ -97,7 +112,7 @@
                   Delete
                 </button>
               </div>
-              <p class="helper save-status" id="saveStatus">Saved lists stay in this browser.</p>
+              <p class="helper save-status" id="saveStatus">Datasets stay in this browser.</p>
             </div>
             <p class="helper" id="wordCount">0 words entered · add 3 more to generate</p>
             <button class="primary-button" id="generateButton" type="button">
@@ -110,6 +125,28 @@
               <h2 id="questionListTitle">Question set</h2>
               <span class="question-count" id="questionCount">0 kept</span>
             </div>
+            <form class="custom-question-form" id="customQuestionForm">
+              <h3>Add a question</h3>
+              <div class="custom-question-row">
+                <input
+                  class="save-input"
+                  id="customQuestionInput"
+                  type="text"
+                  aria-label="Custom question"
+                  placeholder="Question"
+                />
+                <input
+                  class="save-input"
+                  id="customAnswerInput"
+                  type="text"
+                  aria-label="Custom answer"
+                  placeholder="Answer"
+                />
+                <button class="small-button add-question-button" type="submit" aria-label="Add custom question">
+                  +
+                </button>
+              </div>
+            </form>
             <div class="question-list" id="questionList">
               <p class="empty-state">Add 10 words to generate the quiz.</p>
             </div>
@@ -147,6 +184,7 @@
         </div>
 
         <div class="quiz-stage" id="quizStage">
+          <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
           <div class="prompt-emoji" id="promptEmoji" aria-hidden="true">✨</div>
           <p class="question-type" id="questionType">What word matches?</p>
           <h2 class="question-prompt" id="questionPrompt">w _ rd</h2>

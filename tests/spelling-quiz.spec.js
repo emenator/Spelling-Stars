@@ -106,15 +106,20 @@ describe("spelling quiz generation clarifications", () => {
     }
   });
 
-  test("missing-letter questions blank exactly one letter and keep the complete word as the answer", () => {
-    const question = core.makeFillBlankQuestion("spelling", words, 0);
+  test("missing-letter questions blank more letters as words get longer", () => {
+    assert.equal(core.missingLetterCount("cat"), 1);
+    assert.equal(core.missingLetterCount("plant"), 1);
+    assert.equal(core.missingLetterCount("friend"), 2);
+    assert.equal(core.missingLetterCount("classroom"), 3);
+
+    const question = core.makeFillBlankQuestion("classroom", words, 0);
     const blankCount = [...question.prompt].filter((character) => character === "_").length;
 
     assert.equal(question.kind, "fill");
     assert.equal(question.typeLabel, "What word matches?");
-    assert.equal(blankCount, 1);
-    assert.equal(question.answer, "spelling");
-    assert.ok(question.options.includes("spelling"));
+    assert.equal(blankCount, 3);
+    assert.equal(question.answer, "classroom");
+    assert.ok(question.options.includes("classroom"));
   });
 
   test("missing-letter options do not include multiple words that fit the same blank", () => {
@@ -128,16 +133,16 @@ describe("spelling quiz generation clarifications", () => {
     assert.deepEqual(matchingOptions, [question.answer]);
   });
 
-  test("missing-letter questions can scramble which letter position is missing", () => {
+  test("missing-letter questions can scramble which letter positions are missing", () => {
     Math.random = () => 0;
-    const firstLetterMissing = core.makeFillBlankQuestion("spelling", words, 0).prompt;
+    const firstPrompt = core.makeFillBlankQuestion("classroom", words, 0).prompt;
 
     Math.random = () => 0.99;
-    const lastLetterMissing = core.makeFillBlankQuestion("spelling", words, 0).prompt;
+    const secondPrompt = core.makeFillBlankQuestion("classroom", words, 0).prompt;
 
-    assert.equal(firstLetterMissing, "_pelling");
-    assert.equal(lastLetterMissing, "spellin_");
-    assert.notEqual(firstLetterMissing, lastLetterMissing);
+    assert.equal([...firstPrompt].filter((character) => character === "_").length, 3);
+    assert.equal([...secondPrompt].filter((character) => character === "_").length, 3);
+    assert.notEqual(firstPrompt, secondPrompt);
   });
 
   test("start-letter questions ask for a starting letter and the answer starts with it", () => {
@@ -170,6 +175,21 @@ describe("spelling quiz generation clarifications", () => {
     assert.equal(question.scrambleFrames.at(-1), "spelling");
     assert.equal(question.prompt, question.scrambleFrames[0]);
     assert.ok(question.options.includes("spelling"));
+    assert.equal(question.scrambleFrames[1][0], "s");
+    for (let index = 1; index < question.scrambleFrames.length; index += 1) {
+      const changed = [...question.scrambleFrames[index]].filter(
+        (letter, letterIndex) => letter !== question.scrambleFrames[index - 1][letterIndex],
+      );
+      assert.ok(changed.length <= 2);
+    }
+  });
+
+  test("word match distractors prefer similar words over unrelated options", () => {
+    const similar = core.similarWords("cap", ["dog", "map", "tap", "sun", "cat"], 2);
+
+    assert.ok(similar.every((word) => ["lap", "map", "tap", "cat"].includes(word)));
+    assert.ok(!similar.includes("dog"));
+    assert.ok(!similar.includes("sun"));
   });
 
   test("unscramble questions prefer words with at least 3 letters", () => {
@@ -316,6 +336,49 @@ describe("spelling quiz UI clarifications", () => {
     assert.match(app, /function saveDraft\(\)/);
     assert.match(app, /function loadDraft\(\)/);
     assert.match(app, /localStorage\.setItem\(\s*DRAFT_KEY/);
+  });
+
+  test("autosaves edits back into loaded local datasets", () => {
+    assert.match(app, /const LIBRARY_OVERRIDE_KEY = "spellingQuizLibraryOverrides";/);
+    assert.match(app, /function persistLoadedDatasetEdits\(\)/);
+    assert.match(app, /setLibraryOverrides\(overrides\)/);
+    assert.match(app, /const override = getLibraryOverrides\(\)\[cluster\.id\];/);
+    assert.match(app, /setSaveStatus\(`Autosaved "\$\{name\}"\.`\)/);
+    assert.match(app, /function saveLocalState\(\)/);
+  });
+
+  test("lets teachers add custom questions beside the generated question set", () => {
+    assert.match(html, /id="customQuestionForm"/);
+    assert.match(html, /id="customQuestionInput"/);
+    assert.match(html, /id="customAnswerInput"/);
+    assert.match(app, /function addCustomQuestion\(event\)/);
+    assert.match(app, /customQuestionForm\.addEventListener\("submit", addCustomQuestion\)/);
+  });
+
+  test("lets teachers change the answer countdown length", () => {
+    assert.match(html, /id="answerSecondsInput"/);
+    assert.match(app, /let answerSeconds = ANSWER_SECONDS;/);
+    assert.match(app, /timer\.textContent = answerSeconds;/);
+    assert.match(app, /answerSecondsInput\.addEventListener\("input"/);
+  });
+
+  test("tracks per-question results for sidebar marks and non-duplicated scoring", () => {
+    assert.match(app, /activeQuestions = questions\.map\(\(question\) => \(\{ \.\.\.question, selectedAnswer: null, result: null \}\)\);/);
+    assert.match(app, /function deriveScore\(\)/);
+    assert.match(app, /question\.result = isCorrect \? "correct" : "incorrect";/);
+    assert.match(app, /class="drawer-status \$\{question\.result \|\| ""\}"/);
+  });
+
+  test("keeps questions available when returning from the score page", () => {
+    assert.match(app, /function showResults\(\) {[\s\S]*previousQuestionButton\.disabled = activeQuestions\.length === 0;[\s\S]*renderQuestionDrawer\(\);/);
+    assert.match(app, /function renderCurrentQuestion\(\) {[\s\S]*quizStage\.classList\.remove\("hidden"\);[\s\S]*results\.classList\.add\("hidden"\);/);
+  });
+
+  test("celebrates correct answers with confetti", () => {
+    assert.match(html, /id="confettiLayer"/);
+    assert.match(css, /\.confetti-piece\s*{/);
+    assert.match(app, /function launchConfetti\(\)/);
+    assert.match(app, /if \(isCorrect\) launchConfetti\(\);/);
   });
 
   test("locks the game view to the screen without page scrolling", () => {
