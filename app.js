@@ -13,6 +13,7 @@ const {
 const SAVE_KEY = "spellingQuizSavedLists";
 const DRAFT_KEY = "spellingQuizDraft";
 const LIBRARY_OVERRIDE_KEY = "spellingQuizLibraryOverrides";
+const QUESTION_MIX_KEY = "spellingQuizQuestionMix";
 
 const setupView = document.querySelector("#setupView");
 const gameView = document.querySelector("#gameView");
@@ -26,6 +27,12 @@ const visualList = document.querySelector("#visualList");
 const librarySelect = document.querySelector("#librarySelect");
 const loadLibraryButton = document.querySelector("#loadLibraryButton");
 const answerSecondsInput = document.querySelector("#answerSecondsInput");
+const mixFillInput = document.querySelector("#mixFillInput");
+const mixStartInput = document.querySelector("#mixStartInput");
+const mixUnscrambleInput = document.querySelector("#mixUnscrambleInput");
+const mixImageInput = document.querySelector("#mixImageInput");
+const mixSpellInput = document.querySelector("#mixSpellInput");
+const resetMixButton = document.querySelector("#resetMixButton");
 const saveNameInput = document.querySelector("#saveNameInput");
 const saveListButton = document.querySelector("#saveListButton");
 const savedListSelect = document.querySelector("#savedListSelect");
@@ -73,6 +80,7 @@ let score = 0;
 let selected = false;
 let tickId = null;
 let visualHints = {};
+let customMix = getStoredMix();
 let showVisualClues = true;
 let answerSeconds = ANSWER_SECONDS;
 let currentLibraryId = "";
@@ -289,15 +297,91 @@ function deleteSelectedList() {
   setSaveStatus(`Deleted "${name}".`);
 }
 
+function getStoredMix() {
+  try {
+    return JSON.parse(localStorage.getItem(QUESTION_MIX_KEY)) || null;
+  } catch {
+    return null;
+  }
+}
+
+const mixInputs = () => [
+  mixFillInput,
+  mixStartInput,
+  mixUnscrambleInput,
+  mixImageInput,
+  mixSpellInput,
+];
+
+function clampCount(value) {
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function readMixFromInputs() {
+  return {
+    fill: clampCount(mixFillInput.value),
+    start: clampCount(mixStartInput.value),
+    unscramble: clampCount(mixUnscrambleInput.value),
+    image: clampCount(mixImageInput.value),
+    spell: clampCount(mixSpellInput.value),
+  };
+}
+
+function applyMixToInputs(mix) {
+  mixFillInput.value = mix.fill;
+  mixStartInput.value = mix.start;
+  mixUnscrambleInput.value = mix.unscramble;
+  mixImageInput.value = mix.image;
+  mixSpellInput.value = mix.spell;
+}
+
+function refreshMixPanel() {
+  if (customMix) {
+    applyMixToInputs(customMix);
+    return;
+  }
+  const words = getWords();
+  const visualCount = words.filter((word) => visualHints[word]).length;
+  applyMixToInputs(getQuestionPlan(words.length, visualCount));
+}
+
+function handleMixInput() {
+  customMix = readMixFromInputs();
+  localStorage.setItem(QUESTION_MIX_KEY, JSON.stringify(customMix));
+  updateWordCount();
+}
+
+function resetMix() {
+  customMix = null;
+  localStorage.removeItem(QUESTION_MIX_KEY);
+  refreshMixPanel();
+  updateWordCount();
+}
+
+function effectiveQuestionTotal() {
+  const words = getWords();
+  const visualCount = words.filter((word) => visualHints[word]).length;
+  if (!customMix) return getQuestionPlan(words.length, visualCount).total;
+  const cap = (value, max) => Math.min(value, max);
+  return (
+    cap(customMix.fill, words.length) +
+    cap(customMix.start, words.length) +
+    cap(customMix.unscramble, words.length) +
+    cap(customMix.image, visualCount) +
+    cap(customMix.spell, visualCount)
+  );
+}
+
 function updateWordCount() {
   const words = getWords();
   const count = words.length;
   const visualCount = words.filter((word) => visualHints[word]).length;
-  const questionPlan = getQuestionPlan(count, visualCount);
+  refreshMixPanel();
+  const total = effectiveQuestionTotal();
   const wordLabel = count === 1 ? "word" : "words";
   wordCount.textContent =
     count >= MIN_WORDS
-      ? `${count} ${wordLabel} entered · ${visualCount} optional visual clues · ${questionPlan.total} questions`
+      ? `${count} ${wordLabel} entered · ${visualCount} optional visual clues · ${total} questions`
       : `${count} ${wordLabel} entered · add ${MIN_WORDS - count} more to generate`;
   generateButton.disabled = count < MIN_WORDS;
 }
@@ -424,7 +508,7 @@ function addCustomQuestion(event) {
 function generateQuestions() {
   const entries = getWordEntries();
   if (entries.length < MIN_WORDS) return;
-  questions = buildQuestions(entries);
+  questions = buildQuestions(entries, {}, customMix);
   renderQuestionList();
   renderQuestionDrawer();
 }
@@ -715,6 +799,8 @@ answerSecondsInput.addEventListener("input", () => {
   answerSeconds = Math.min(30, Math.max(3, Number(answerSecondsInput.value) || ANSWER_SECONDS));
   saveLocalState();
 });
+mixInputs().forEach((input) => input.addEventListener("input", handleMixInput));
+resetMixButton.addEventListener("click", resetMix);
 customQuestionForm.addEventListener("submit", addCustomQuestion);
 saveListButton.addEventListener("click", saveCurrentList);
 loadListButton.addEventListener("click", loadSelectedList);
@@ -738,3 +824,4 @@ renderVisualHints();
 renderLibraryLists();
 renderSavedLists();
 updateWordCount();
+refreshMixPanel();

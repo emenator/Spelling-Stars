@@ -236,6 +236,20 @@ textarea {
   background: #fbfdfc;
 }
 
+.question-mix-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+
+.question-mix-panel .number-input {
+  min-height: 38px;
+}
+
 .setting-row,
 .custom-question-row {
   display: grid;

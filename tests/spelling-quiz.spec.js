@@ -366,6 +366,26 @@ describe("spelling quiz UI clarifications", () => {
     assert.match(app, /answerSecondsInput\.addEventListener\("input"/);
   });
 
+  test("lets teachers tune how many of each question type to generate", () => {
+    assert.match(html, /id="questionMixPanel"/);
+    assert.match(html, /id="mixFillInput"/);
+    assert.match(html, /id="mixStartInput"/);
+    assert.match(html, /id="mixUnscrambleInput"/);
+    assert.match(html, /id="mixImageInput"/);
+    assert.match(html, /id="mixSpellInput"/);
+    assert.match(html, /id="resetMixButton"/);
+    assert.match(css, /\.question-mix-panel\s*{/);
+  });
+
+  test("remembers the teacher's question mix and feeds it into generation", () => {
+    assert.match(app, /const QUESTION_MIX_KEY = "spellingQuizQuestionMix";/);
+    assert.match(app, /function refreshMixPanel\(\)/);
+    assert.match(app, /function resetMix\(\)/);
+    assert.match(app, /localStorage\.setItem\(QUESTION_MIX_KEY/);
+    assert.match(app, /buildQuestions\(entries, \{\}, customMix\)/);
+    assert.match(app, /resetMixButton\.addEventListener\("click", resetMix\)/);
+  });
+
   test("tracks per-question results for sidebar marks and non-duplicated scoring", () => {
     assert.match(app, /activeQuestions = questions\.map\(\(question\) => \(\{ \.\.\.question, selectedAnswer: null, result: null \}\)\);/);
     assert.match(app, /function deriveScore\(\)/);
