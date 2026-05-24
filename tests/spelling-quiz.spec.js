@@ -49,7 +49,8 @@ describe("spelling quiz generation clarifications", () => {
     assert.equal(questions.filter((question) => question.kind === "fill").length, 5);
     assert.equal(questions.filter((question) => question.kind === "start").length, 5);
     assert.equal(questions.filter((question) => question.kind === "unscramble").length, 5);
-    assert.equal(questions.filter((question) => question.kind === "image").length, 10);
+    assert.equal(questions.filter((question) => question.kind === "image").length, 5);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 5);
   });
 
   test("scales the question mix for smaller and larger lists", () => {
@@ -57,24 +58,27 @@ describe("spelling quiz generation clarifications", () => {
       fill: 2,
       start: 2,
       unscramble: 2,
-      image: 3,
+      image: 2,
+      spell: 1,
       total: 9,
     });
     assert.deepEqual(core.getQuestionPlan(12), {
       fill: 6,
       start: 6,
       unscramble: 6,
-      image: 12,
+      image: 6,
+      spell: 6,
       total: 30,
     });
   });
 
-  test("prioritizes image questions only for words with visual clues", () => {
+  test("prioritizes image and spell questions only for words with visual clues", () => {
     assert.deepEqual(core.getQuestionPlan(5, 2), {
       fill: 4,
       start: 4,
       unscramble: 4,
-      image: 2,
+      image: 1,
+      spell: 1,
       total: 14,
     });
 
@@ -86,11 +90,10 @@ describe("spelling quiz generation clarifications", () => {
       { word: "friend", emoji: "" },
     ];
     const questions = core.buildQuestions(entries);
-    const imageQuestions = questions.filter((question) => question.kind === "image");
     const nonVisualWords = new Set(["because", "their", "friend"]);
 
-    assert.equal(imageQuestions.length, 2);
-    assert.ok(imageQuestions.every((question) => question.emoji));
+    assert.equal(questions.filter((question) => question.kind === "image").length, 1);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 1);
     assert.ok(
       questions.some((question) => nonVisualWords.has(question.word) && question.kind !== "image"),
     );
@@ -222,7 +225,8 @@ describe("spelling quiz generation clarifications", () => {
     const questions = core.buildQuestions(entries);
 
     assert.equal(entries.find((entry) => entry.word === "cat").emoji, "A");
-    assert.equal(questions.filter((question) => question.kind === "image").length, 10);
+    assert.equal(questions.filter((question) => question.kind === "image").length, 5);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 5);
     assert.ok(questions.every((question) => question.emoji));
   });
 
@@ -389,7 +393,7 @@ describe("spelling quiz UI clarifications", () => {
   test("has an in-game visual clue toggle that keeps image-only questions visible", () => {
     assert.match(html, /id="visualToggleButton"[\s\S]*aria-label="Hide visual clues"/);
     assert.match(app, /let showVisualClues = true;/);
-    assert.match(app, /function shouldShowVisual\(question\) {[\s\S]*question\.kind === "image" \|\| showVisualClues;/);
+    assert.match(app, /function shouldShowVisual\(question\) {[\s\S]*question\.kind === "image" \|\| question\.kind === "spell" \|\| showVisualClues;/);
     assert.match(app, /visualToggleButton\.addEventListener\("click", toggleVisualClues\)/);
   });
 

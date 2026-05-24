@@ -517,7 +517,7 @@ function renderCurrentQuestion() {
 }
 
 function shouldShowVisual(question) {
-  return question.kind === "image" || showVisualClues;
+  return question.kind === "image" || question.kind === "spell" || showVisualClues;
 }
 
 function renderQuestionVisual(question = activeQuestions[currentIndex]) {
