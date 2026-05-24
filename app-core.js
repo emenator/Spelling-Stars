@@ -43,7 +43,6 @@
     egg: "🥚",
     fish: "🐟",
     flower: "🌸",
-    for: "4️⃣",
     frog: "🐸",
     gift: "🎁",
     goat: "🐐",

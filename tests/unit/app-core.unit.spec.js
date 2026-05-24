@@ -24,11 +24,11 @@ describe("unit: quiz generation engine", () => {
     const questions = core.buildQuestions(words);
 
     assert.equal(questions.length, 25);
-    assert.equal(questions.filter((question) => question.kind === "fill").length, 5);
+    assert.equal(questions.filter((question) => question.kind === "fill").length, 6);
     assert.equal(questions.filter((question) => question.kind === "start").length, 5);
     assert.equal(questions.filter((question) => question.kind === "unscramble").length, 5);
     assert.equal(questions.filter((question) => question.kind === "image").length, 5);
-    assert.equal(questions.filter((question) => question.kind === "spell").length, 5);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 4);
   });
 
   test("uses only visual words for image and spell questions", () => {

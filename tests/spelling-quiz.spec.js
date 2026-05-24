@@ -46,11 +46,11 @@ describe("spelling quiz generation clarifications", () => {
     const questions = core.buildQuestions(words);
 
     assert.equal(questions.length, 25);
-    assert.equal(questions.filter((question) => question.kind === "fill").length, 5);
+    assert.equal(questions.filter((question) => question.kind === "fill").length, 6);
     assert.equal(questions.filter((question) => question.kind === "start").length, 5);
     assert.equal(questions.filter((question) => question.kind === "unscramble").length, 5);
     assert.equal(questions.filter((question) => question.kind === "image").length, 5);
-    assert.equal(questions.filter((question) => question.kind === "spell").length, 5);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 4);
   });
 
   test("scales the question mix for smaller and larger lists", () => {
@@ -234,7 +234,8 @@ describe("spelling quiz generation clarifications", () => {
     const entries = core.normalizeQuestionEntries(words);
 
     assert.equal(entries.length, 10);
-    assert.ok(entries.every((entry) => entry.emoji));
+    assert.equal(entries.filter((entry) => entry.emoji).length, 9);
+    assert.equal(entries.find((entry) => entry.word === "for").emoji, "");
   });
 
   test("timing is 10 seconds to answer and 5 seconds to show the answer", () => {
