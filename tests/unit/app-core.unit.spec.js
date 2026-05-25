@@ -168,11 +168,21 @@ describe("unit: quiz generation engine", () => {
     assert.equal(question.scrambleFrames.length, core.ANSWER_SECONDS + 1);
     assert.notEqual(question.scrambleFrames[0], "spelling");
     assert.equal(question.scrambleFrames.at(-1), "spelling");
+    assert.notEqual(question.scrambleFrames[core.ANSWER_SECONDS - 3], "spelling");
+    assert.equal(question.scrambleFrames[core.ANSWER_SECONDS - 2], "spelling");
     for (let index = 1; index < question.scrambleFrames.length; index += 1) {
       const changed = [...question.scrambleFrames[index]].filter(
         (letter, letterIndex) => letter !== question.scrambleFrames[index - 1][letterIndex],
       );
       assert.ok(changed.length <= 2);
     }
+  });
+
+  test("two-letter unscramble frames stay scrambled until two seconds before reveal", () => {
+    const frames = core.buildUnscrambleFrames("to");
+
+    assert.notEqual(frames[0], "to");
+    assert.ok(frames.slice(0, core.ANSWER_SECONDS - 2).every((frame) => frame !== "to"));
+    assert.equal(frames[core.ANSWER_SECONDS - 2], "to");
   });
 });

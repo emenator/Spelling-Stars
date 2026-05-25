@@ -402,6 +402,7 @@
     const frames = [];
     const letters = [...word];
     const maxSwaps = Math.min(ANSWER_SECONDS, Math.max(1, letters.length - 1));
+    const revealAtStep = Math.max(1, ANSWER_SECONDS - 2);
     const start = [...letters];
 
     for (let index = 0; index < maxSwaps; index += 1) {
@@ -420,7 +421,15 @@
     const current = [...start];
 
     for (let step = 1; step <= ANSWER_SECONDS; step += 1) {
-      const targetIndex = step === 1 ? 0 : current.findIndex((letter, index) => letter !== letters[index]);
+      const mismatchedIndexes = current
+        .map((letter, index) => (letter !== letters[index] ? index : null))
+        .filter((index) => index !== null);
+      const targetIndex =
+        step < revealAtStep && mismatchedIndexes.length <= 2
+          ? -1
+          : step === 1
+            ? 0
+            : mismatchedIndexes[0] ?? -1;
       if (targetIndex >= 0) {
         const swapIndex = current.findIndex(
           (letter, index) => index !== targetIndex && letter === letters[targetIndex],
@@ -429,9 +438,18 @@
           [current[targetIndex], current[swapIndex]] = [current[swapIndex], current[targetIndex]];
         }
       }
+      if (step < revealAtStep && current.join("") === word && letters.length > 1) {
+        [current[letters.length - 2], current[letters.length - 1]] = [
+          current[letters.length - 1],
+          current[letters.length - 2],
+        ];
+      }
       frames.push(current.join(""));
     }
 
+    for (let index = revealAtStep; index < frames.length; index += 1) {
+      frames[index] = word;
+    }
     frames[frames.length - 1] = word;
     return frames;
   }
