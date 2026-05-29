@@ -42,15 +42,15 @@ describe("spelling quiz generation clarifications", () => {
     assert.equal(core.MIN_WORDS, 3);
   });
 
-  test("generates 25 questions from the original 10-word example", () => {
+  test("generates 26 questions from the original 10-word example", () => {
     const questions = core.buildQuestions(words);
 
-    assert.equal(questions.length, 25);
+    assert.equal(questions.length, 26);
     assert.equal(questions.filter((question) => question.kind === "fill").length, 6);
     assert.equal(questions.filter((question) => question.kind === "start").length, 5);
     assert.equal(questions.filter((question) => question.kind === "unscramble").length, 5);
     assert.equal(questions.filter((question) => question.kind === "image").length, 5);
-    assert.equal(questions.filter((question) => question.kind === "spell").length, 4);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 5);
   });
 
   test("scales the question mix for smaller and larger lists", () => {
@@ -72,14 +72,14 @@ describe("spelling quiz generation clarifications", () => {
     });
   });
 
-  test("prioritizes image and spell questions only for words with visual clues", () => {
+  test("prioritizes image questions for visual words and spell questions for all words", () => {
     assert.deepEqual(core.getQuestionPlan(5, 2), {
       fill: 4,
       start: 4,
       unscramble: 4,
       image: 1,
-      spell: 1,
-      total: 14,
+      spell: 2,
+      total: 15,
     });
 
     const entries = [
@@ -91,9 +91,11 @@ describe("spelling quiz generation clarifications", () => {
     ];
     const questions = core.buildQuestions(entries);
     const nonVisualWords = new Set(["because", "their", "friend"]);
+    const spellQuestions = questions.filter((question) => question.kind === "spell");
 
     assert.equal(questions.filter((question) => question.kind === "image").length, 1);
-    assert.equal(questions.filter((question) => question.kind === "spell").length, 1);
+    assert.equal(spellQuestions.length, 2);
+    assert.ok(spellQuestions.some((question) => nonVisualWords.has(question.word)));
     assert.ok(
       questions.some((question) => nonVisualWords.has(question.word) && question.kind !== "image"),
     );

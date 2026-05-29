@@ -495,7 +495,7 @@
     const visual = Math.min(wordCount, Math.max(0, visualWordCount));
     const missingImageCount = wordCount - visual;
     const image = Math.ceil(visual / 2);
-    const spell = Math.floor(visual / 2);
+    const spell = Math.max(1, Math.floor(wordCount / 2));
     const plan = {
       fill: scaledCount(wordCount, FILL_BLANK_COUNT) + Math.ceil(missingImageCount / 3),
       start: scaledCount(wordCount, START_LETTER_COUNT) + Math.floor(missingImageCount / 3),
@@ -521,7 +521,7 @@
       start: clamp(mix.start, wordCount),
       unscramble: clamp(mix.unscramble, wordCount),
       image: clamp(mix.image, visualCount),
-      spell: clamp(mix.spell, visualCount),
+      spell: clamp(mix.spell, wordCount),
     };
   }
 
@@ -540,7 +540,7 @@
       ...shuffledEntries.filter((entry) => !longerEntries.includes(entry)),
     ].slice(0, questionPlan.unscramble);
     const imageEntries = shuffle(visualEntries).slice(0, questionPlan.image);
-    const spellEntries = shuffle(visualEntries).slice(0, questionPlan.spell);
+    const spellEntries = shuffle(shuffledEntries).slice(0, questionPlan.spell);
     const fill = fillEntries.map((entry, index) => makeFillBlankQuestion(entry, entries, index));
     const start = startEntries.map((entry, index) => makeStartLetterQuestion(entry, entries, index));
     const unscramble = unscrambleEntries.map((entry, index) =>

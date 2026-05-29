@@ -368,7 +368,7 @@ function effectiveQuestionTotal() {
     cap(customMix.start, words.length) +
     cap(customMix.unscramble, words.length) +
     cap(customMix.image, visualCount) +
-    cap(customMix.spell, visualCount)
+    cap(customMix.spell, words.length)
   );
 }
 

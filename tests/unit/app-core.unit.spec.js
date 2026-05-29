@@ -20,18 +20,18 @@ describe("unit: quiz generation engine", () => {
     assert.equal(core.MIN_WORDS, 3);
   });
 
-  test("preserves the original 10-word question mix", () => {
+  test("preserves the original 10-word question mix with spell questions for all words", () => {
     const questions = core.buildQuestions(words);
 
-    assert.equal(questions.length, 25);
+    assert.equal(questions.length, 26);
     assert.equal(questions.filter((question) => question.kind === "fill").length, 6);
     assert.equal(questions.filter((question) => question.kind === "start").length, 5);
     assert.equal(questions.filter((question) => question.kind === "unscramble").length, 5);
     assert.equal(questions.filter((question) => question.kind === "image").length, 5);
-    assert.equal(questions.filter((question) => question.kind === "spell").length, 4);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 5);
   });
 
-  test("uses only visual words for image and spell questions", () => {
+  test("uses only visual words for image questions and any word for spell questions", () => {
     const entries = [
       { word: "cat", emoji: "🐱" },
       { word: "dog", emoji: "🐶" },
@@ -40,14 +40,15 @@ describe("unit: quiz generation engine", () => {
       { word: "friend", emoji: "" },
     ];
     const questions = core.buildQuestions(entries);
-    const emojiKinds = new Set(["image", "spell"]);
-    const visualQuestions = questions.filter((question) => emojiKinds.has(question.kind));
+    const imageQuestions = questions.filter((question) => question.kind === "image");
+    const spellQuestions = questions.filter((question) => question.kind === "spell");
     const nonVisualWords = new Set(["because", "their", "friend"]);
 
     assert.equal(questions.filter((question) => question.kind === "image").length, 1);
-    assert.equal(questions.filter((question) => question.kind === "spell").length, 1);
-    assert.ok(visualQuestions.every((question) => question.emoji));
-    assert.ok(visualQuestions.every((question) => !nonVisualWords.has(question.word)));
+    assert.equal(spellQuestions.length, 2);
+    assert.ok(imageQuestions.every((question) => question.emoji));
+    assert.ok(imageQuestions.every((question) => !nonVisualWords.has(question.word)));
+    assert.ok(spellQuestions.some((question) => nonVisualWords.has(question.word)));
   });
 
   test("misspell returns distinct plausible misspellings, never the real word", () => {
@@ -119,7 +120,7 @@ describe("unit: quiz generation engine", () => {
 
     assert.equal(questions.filter((question) => question.kind === "fill").length, 3);
     assert.equal(questions.filter((question) => question.kind === "image").length, 2);
-    assert.equal(questions.filter((question) => question.kind === "spell").length, 2);
+    assert.equal(questions.filter((question) => question.kind === "spell").length, 3);
   });
 
   test("start-letter distractors never start with the prompt letter and prefer the list", () => {
